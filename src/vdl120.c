@@ -53,8 +53,30 @@ int EP_OUT = EP_OUT_DEFAULT;
 #define ERR(...) do { fprintf(stderr, "ERR: %s:%d: ", __FILE__, __LINE__); fprintf(stderr, __VA_ARGS__); } while (0)
 
 
-/* struct definitions */
+// Write configuration with manual start "TestManuel"
+// ce 00 00 00 - Set config
+// 32 00 00 00 - 50 bytes to record
+// 00 00 00 00 -  0 bytes recorded
+// 1e 00 00 00 - 20 seconds interval
+// e4 07 00 00 - Time year - 2020
+// 00 00       - Padding
+// 20 41       - Temp low
+// 00 00       - Padding
+// 20 42       - Temp high
+// 0c 1f       - 12/31
+// 17 1a 2d    - 23:26:45
+// 00          - Celcius
+// 7e          - Alarm off / 126
+// 54 65 73 74 4d 61 6e 75 65 6c 00 65 00 12 01 00 - "TestManuel"
+// 01          - Start logging manually
+// 00 00       - Padding
+// f0 41       - Rh low
+// 00 00       - Padding
+// 96 42       - Rh high
+// ce 00 00 00 - Config end
 
+/* struct definitions */
+/* LSB first */
 struct config {
 /*  0- 3 */  int config_begin; /* 0xce = set config, 0x00 = logger is active */
 /*  4- 7 */  int num_data_conf; /* number of data configured */
@@ -562,7 +584,7 @@ print_config(
 	printf("%stime_sec =           %i\n",   line_prefix, cfg->time_sec);
 	printf("%stemp_is_fahrenheit = %i\n",   line_prefix, cfg->temp_is_fahrenheit);
 	printf("%sled_conf =           0x%02x (freq=%i, alarm=%i)\n",
-		line_prefix, cfg->led_conf, (cfg->led_conf & 0x1F), ((cfg->led_conf & 0x80)?1:0));
+		line_prefix, cfg->led_conf, (cfg->led_conf & 0x78)>>2, ((cfg->led_conf & 0x80)?1:0));
 	printf("%sstart =              0x%02x", line_prefix, cfg->start);
 	if (cfg->start == 1) {
 		printf(" (manual)");
@@ -630,7 +652,9 @@ build_config(
 	
 	cfg->temp_is_fahrenheit = temp_is_fahrenheit & 1;
 	
-	cfg->led_conf = (led_alarm ? (1<<7):0) | (led_freq & 0x1F);
+	cfg->led_conf = (led_alarm ? 0x80:0) | ((led_freq & 0x1e)<<2) | 0x04 | ((start==1)?0x02:0);
+
+printf("START %02X LED_CONF %02X %02X\n",	cfg->start,cfg->led_conf,((start==1)?0x02:0));
 	
 	memset(cfg->name, 0, sizeof(cfg->name)); // Make sure EOS '\0' is in place
 	strncpy(cfg->name, name, 16);
@@ -638,7 +662,15 @@ build_config(
 	cfg->thresh_rh_low  = num2bin(thresh_rh_low);
 	cfg->thresh_rh_high = num2bin(thresh_rh_high);
 
-printf("START %02X\n",	cfg->start);
+		printf("CONF:\n");
+	int i;
+	for(i=0;i<sizeof(*cfg);i++) {
+		printf("%02X ",((unsigned char*)cfg)[i]);
+		if((i&0xF)==0xF) {
+			printf("\n");
+		}
+        }
+
 	
 	return cfg;
 }
@@ -722,7 +754,7 @@ check_config(
 		return 1;
 	}
 	
-	int led_freq = cfg->led_conf & 0x1F;
+	int led_freq = (cfg->led_conf>>2) & 0x1E;
 	if (led_freq != 10 && led_freq != 20 && led_freq != 30)
 	{
 		printf("check_config: invalid led_conf (freq)\n");

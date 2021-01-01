@@ -671,15 +671,21 @@ build_config(
 	cfg->led_conf =  (led_alarm ? 0x80:0) | 0x40
                       | ((led_freq>=30)?0x20:0) | (led_freq & 0x1F);
 
-printf("START %02X LED_CONF %02X %02X\n",	cfg->start,cfg->led_conf,((start==1)?0x02:0));
+#ifdef DEBUG
+	printf("LED_CONF %02X\n", cfg->led_conf);
+#endif
 	
-	memset(cfg->name, 0, sizeof(cfg->name)); // Make sure EOS '\0' is in place
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+	memset(cfg->name, 0, sizeof(cfg->name)); // Prefill with 0s
 	strncpy(cfg->name, name, 16);
+#pragma GCC diagnostic pop
 	
 	cfg->thresh_rh_low  = num2bin(thresh_rh_low);
 	cfg->thresh_rh_high = num2bin(thresh_rh_high);
 
-		printf("CONF:\n");
+#ifdef DEBUG
+	printf("CONF:\n");
 	int i;
 	for(i=0;i<sizeof(*cfg);i++) {
 		printf("%02X ",((unsigned char*)cfg)[i]);
@@ -687,7 +693,7 @@ printf("START %02X LED_CONF %02X %02X\n",	cfg->start,cfg->led_conf,((start==1)?0
 			printf("\n");
 		}
         }
-
+#endif
 	
 	return cfg;
 }
@@ -911,6 +917,7 @@ if(  dev->descriptor.idProduct == PID2) { // Was not working for "PID", so only 
   	
       
 	/* get options */
+        //  default options.  TODO: Read options first and use previous values.
         int opt;
 	int maxTemp=40;
 	int minTemp=0;
@@ -920,7 +927,8 @@ if(  dev->descriptor.idProduct == PID2) { // Was not working for "PID", so only 
 	int ledAlarm=0;
 	int ledFreq=10;
         bool automaticStart=true;
-        enum { CMD_NONE, CMD_CONFIG, CMD_PRINT_CONFIG, CMD_PRINT_DATA, CMD_STORE_DATA } cmd;
+        enum { CMD_NONE, CMD_CONFIG, CMD_PRINT_CONFIG, CMD_PRINT_DATA, CMD_STORE_DATA }
+            cmd = CMD_NONE;
 	while ((opt = getopt(argc, argv, "cipsmab:t:T:h:H:FCxX")) != -1) {
         	switch (opt) {
         	case 'c': cmd=CMD_CONFIG; break;

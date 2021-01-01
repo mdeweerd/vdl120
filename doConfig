@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Manual option not working on my logger
-#make ; ./vdl120 -m -b 30 -h 20 -H 70 -t 10 -T 40 -x -c "LoggerTest1" 50 30; ./vdl120 -i
-# make ; ./vdl120 -m -b 30 -h 30 -H 75 -t 10 -T 40 -x -c "TestManuel" 50 30; ./vdl120 -i
- make ; ./vdl120 -a -b 20 -h 30 -H 75 -t 10 -T 40 -X -c "TestManuel" 50 30; ./vdl120 -i
-#make ; ./vdl120 -a -b 30 -h 20 -H 70 -t 10 -T 15 -X -c "LoggerTest2" 200 5; ./vdl120 -i
-#make ; ./vdl120 -a -b 30 -h 20 -H 70 -t 10 -T 15 -x -c "LoggerTest2" 200 2; ./vdl120 -i
+#make debug ; ./vdl120 -m -b 30 -h 20 -H 70 -t 10 -T 40 -x -c "LoggerTest1" 50 30; ./vdl120 -i
+# make debug ; ./vdl120 -m -b 30 -h 30 -H 75 -t 10 -T 40 -x -c "TestManuel" 50 30; ./vdl120 -i
+ make debug ; ./vdl120 -a -b 20 -h 30 -H 75 -t 10 -T 40 -X -c "TestManuel" 50 30; ./vdl120 -i
+#make debug ; ./vdl120 -a -b 30 -h 20 -H 70 -t 10 -T 15 -X -c "LoggerTest2" 200 5; ./vdl120 -i
+#make debug ; ./vdl120 -a -b 30 -h 20 -H 70 -t 10 -T 15 -x -c "LoggerTest2" 200 2; ./vdl120 -i

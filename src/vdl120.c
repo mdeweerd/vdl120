@@ -74,6 +74,22 @@ int EP_OUT = EP_OUT_DEFAULT;
 // 00 00       - Padding
 // 96 42       - Rh high
 // ce 00 00 00 - Config end
+//
+//
+// Examples regarding manual/automatic start and blink interval:
+// 
+// led_conf start ALM Description
+// 0xCA     Auto  ALM Automatic start 10s -> 202
+// 0xD4     Auto  ALM Automatic start 20s -> 212
+// 0xFE     Auto  ALM Automatic start 30s -> 254
+//
+// 0xCA     Man   ALM Manuel 10s -> 202
+// 0xD4     Man   ALM Manuel 20s -> 212
+// 0xFE     Man   ALM Manuel 30s -> 254
+//
+// 0x4A     Man   ALM Manuel 10s -> 74  = 64+10
+// 0x54     Man   ALM Manuel 20s -> 84  = 64+   20
+// 0x7E     Man   ALM Manuel 30s -> 126 = 64+32+30
 
 /* struct definitions */
 /* LSB first */
@@ -93,7 +109,7 @@ struct config {
 /* 31    */  char time_min;
 /* 32    */  char time_sec;
 /* 33    */  char temp_is_fahrenheit;
-/* 34    */  unsigned char led_conf; /* bit 0: alarm on/off, bits 1-2: 10 (?), bits 3-7: flash frequency in seconds */
+/* 34    */  unsigned char led_conf; /* bit 7: alarm on/off, bit 6: 1  bit 5: 1 when led flash_freq=30   bits 4-0: flash frequency in seconds */
 // 35 ?!
 /* 35-50 */  char name[16]; /* config name. actually just 16 bytes: 35-50 */
 /* 51    */  unsigned char start; /* 0x02 = start logging immediately; 0x01 = start logging manually */
@@ -584,7 +600,7 @@ print_config(
 	printf("%stime_sec =           %i\n",   line_prefix, cfg->time_sec);
 	printf("%stemp_is_fahrenheit = %i\n",   line_prefix, cfg->temp_is_fahrenheit);
 	printf("%sled_conf =           0x%02x (freq=%i, alarm=%i)\n",
-		line_prefix, cfg->led_conf, (cfg->led_conf & 0x78)>>2, ((cfg->led_conf & 0x80)?1:0));
+		line_prefix, cfg->led_conf, (cfg->led_conf & 0x1F), ((cfg->led_conf & 0x80)?1:0));
 	printf("%sstart =              0x%02x", line_prefix, cfg->start);
 	if (cfg->start == 1) {
 		printf(" (manual)");
@@ -652,7 +668,8 @@ build_config(
 	
 	cfg->temp_is_fahrenheit = temp_is_fahrenheit & 1;
 	
-	cfg->led_conf = (led_alarm ? 0x80:0) | ((led_freq & 0x1e)<<2) | 0x04 | ((start==1)?0x02:0);
+	cfg->led_conf =  (led_alarm ? 0x80:0) | 0x40
+                      | ((led_freq>=30)?0x20:0) | (led_freq & 0x1F);
 
 printf("START %02X LED_CONF %02X %02X\n",	cfg->start,cfg->led_conf,((start==1)?0x02:0));
 	
@@ -754,7 +771,7 @@ check_config(
 		return 1;
 	}
 	
-	int led_freq = (cfg->led_conf>>2) & 0x1E;
+	int led_freq = (cfg->led_conf) & 0x1F;
 	if (led_freq != 10 && led_freq != 20 && led_freq != 30)
 	{
 		printf("check_config: invalid led_conf (freq)\n");
@@ -912,7 +929,9 @@ if(  dev->descriptor.idProduct == PID2) { // Was not working for "PID", so only 
         	case 's': cmd=CMD_STORE_DATA; break;
         	case 'm': automaticStart=false; break;
         	case 'a': automaticStart=true; break;
-        	case 'b': ledFreq = atoi(optarg); break;
+        	case 'b': ledFreq = ((atoi(optarg)+5)/10)*10;
+                          if(ledFreq>30){ ledFreq=30; }
+                          break;
         	case 't': minTemp=atoi(optarg); break;
         	case 'T': maxTemp=atoi(optarg); break;
         	case 'h': minHum=atoi(optarg); break;
